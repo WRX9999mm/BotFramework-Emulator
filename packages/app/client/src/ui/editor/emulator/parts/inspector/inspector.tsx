@@ -78,10 +78,11 @@ interface IpcMessageEvent extends Event {
   args: any[];
 }
 
-interface InspectorProps {
+export interface InspectorProps {
   appPath?: string;
   createAriaAlert?: (msg: string) => void;
   document: ChatDocument;
+  documentId?: string;
   themeInfo: { themeName: string; themeComponents: string[] };
   activeBot?: IBotConfiguration;
   botHash?: string;
@@ -139,7 +140,7 @@ export class Inspector extends React.Component<InspectorProps, InspectorState> {
   private domReadyByLocation = {};
 
   public static getDerivedStateFromProps(newProps: InspectorProps, prevState: InspectorState): InspectorState {
-    const { document = {} as ChatDocument } = newProps;
+    const { activeBot, botHash, document = {} as ChatDocument, themeInfo } = newProps;
     const inspectorResult = Inspector.getInspector(document.inspectorObjects);
     const { inspector = { name: '' } } = inspectorResult.response;
     const buttons = Inspector.getButtons(inspector.accessories);
@@ -150,14 +151,14 @@ export class Inspector extends React.Component<InspectorProps, InspectorState> {
     }
     return {
       ...prevState,
-      activeBot: newProps.activeBot,
-      logEntries: newProps.document.log.entries,
-      highlightedObjects: newProps.document.highlightedObjects,
-      botHash: newProps.botHash,
+      activeBot: activeBot,
+      logEntries: document.log.entries,
+      highlightedObjects: document.highlightedObjects,
+      botHash: botHash,
       inspector,
       inspectorSrc: inspector.src,
       inspectObj: inspectorResult.inspectObj,
-      themeInfo: newProps.themeInfo,
+      themeInfo: themeInfo,
       title: inspector.name,
       buttons,
     };

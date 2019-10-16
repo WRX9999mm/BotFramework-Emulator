@@ -31,35 +31,4 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-import { remote } from 'electron';
-import { Provider } from 'react-redux';
-import * as ReactDOM from 'react-dom';
-import * as React from 'react';
-import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
-
-import './commands';
-import interceptError from './interceptError';
-import interceptHyperlink from './interceptHyperlink';
-import Main from './ui/shell/mainContainer';
-import { store } from './state/store';
-import './ui/styles/globals.scss';
-
-interceptError();
-interceptHyperlink();
-
-if (!remote.app.isPackaged) {
-  // enable react & react-redux dev tools
-  installExtension([REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS])
-    .then(installed => console.log('Successfully installed: ', installed.join(', ')))
-    .catch(err => console.error('Failed to install dev tools: ', err));
-}
-
-// Start rendering the UI
-ReactDOM.render(
-  React.createElement(Provider, { store }, React.createElement(Main as any)),
-  document.getElementById('root')
-);
-
-if (module.hasOwnProperty('hot')) {
-  (module as any).hot.accept();
-}
+export * from './chatPanelContainer';

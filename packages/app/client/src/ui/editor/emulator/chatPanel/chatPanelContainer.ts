@@ -31,35 +31,20 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-import { remote } from 'electron';
-import { Provider } from 'react-redux';
-import * as ReactDOM from 'react-dom';
-import * as React from 'react';
-import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
+import { connect } from 'react-redux';
 
-import './commands';
-import interceptError from './interceptError';
-import interceptHyperlink from './interceptHyperlink';
-import Main from './ui/shell/mainContainer';
-import { store } from './state/store';
-import './ui/styles/globals.scss';
+import { RootState } from '../../../../state';
 
-interceptError();
-interceptHyperlink();
+import { ChatPanel, ChatPanelProps } from './chatPanel';
 
-if (!remote.app.isPackaged) {
-  // enable react & react-redux dev tools
-  installExtension([REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS])
-    .then(installed => console.log('Successfully installed: ', installed.join(', ')))
-    .catch(err => console.error('Failed to install dev tools: ', err));
+function mapStateToProps(state: RootState, { documentId }: { documentId: string }): ChatPanelProps {
+  const endpointUrl = state.chat.chats[documentId] ? state.chat.chats[documentId].endpointUrl : '';
+  return {
+    endpointUrl,
+  };
 }
 
-// Start rendering the UI
-ReactDOM.render(
-  React.createElement(Provider, { store }, React.createElement(Main as any)),
-  document.getElementById('root')
-);
-
-if (module.hasOwnProperty('hot')) {
-  (module as any).hot.accept();
-}
+export const ChatPanelContainer = connect(
+  mapStateToProps,
+  undefined
+)(ChatPanel);

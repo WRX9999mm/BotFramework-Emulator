@@ -30,24 +30,30 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
 import { ValueTypes } from '@bfemulator/app-shared';
 import { User } from '@bfemulator/sdk-shared';
 import { Activity, ActivityTypes } from 'botframework-schema';
 import ReactWebChat, { createStyleSet } from 'botframework-webchat';
 import * as React from 'react';
-import { Component, KeyboardEvent, MouseEvent, ReactNode } from 'react';
+import { PureComponent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { PrimaryButton } from '@bfemulator/ui-react';
 import { EmulatorMode } from '@bfemulator/sdk-shared';
+import { DirectLine } from 'botframework-directlinejs';
 
 import { areActivitiesEqual, getActivityTargets } from '../../../../../utils';
-import { ChatDocument } from '../../../../../state/reducers/chat';
 
 import ActivityWrapper from './activityWrapper';
 import * as styles from './chat.scss';
 import webChatStyleOptions from './webChatTheme';
 
 export interface ChatProps {
-  document: ChatDocument;
+  botId?: string;
+  conversationId?: string;
+  directLine?: DirectLine;
+  documentId?: string;
+  inspectorObjects?: any[];
+  highlightedObjects?: Activity[];
   mode: EmulatorMode;
   currentUser: User;
   locale: string;
@@ -70,13 +76,12 @@ const adaptiveCardInputs = {
   TEXTAREA: null,
 };
 
-export class Chat extends Component<ChatProps, ChatState> {
+export class Chat extends PureComponent<ChatProps, ChatState> {
   public state = { waitForSpeechToken: false } as ChatState;
   private activityMap: { [activityId: string]: Activity };
 
   public static getDerivedStateFromProps(newProps: ChatProps): ChatState {
-    let selectedActivity =
-      'inspectorObjects' in newProps.document ? newProps.document.inspectorObjects[0] : ({} as Activity);
+    let selectedActivity = 'inspectorObjects' in newProps ? newProps.inspectorObjects[0] : ({} as Activity);
     // The log panel gives us the entire trace while
     // WebChat gives us the nested activity. Determine
     // if we should be targeting the nested activity
@@ -84,10 +89,7 @@ export class Chat extends Component<ChatProps, ChatState> {
     if (selectedActivity && selectedActivity.valueType === ValueTypes.Activity) {
       selectedActivity = selectedActivity.value;
     }
-    const highlightedActivities = getActivityTargets([
-      ...(newProps.document.highlightedObjects || []),
-      selectedActivity,
-    ]);
+    const highlightedActivities = getActivityTargets([...(newProps.highlightedObjects || []), selectedActivity]);
     return {
       highlightedActivities,
     };
@@ -95,9 +97,18 @@ export class Chat extends Component<ChatProps, ChatState> {
 
   public render() {
     this.activityMap = {};
-    const { currentUser, document, locale, mode, webchatStore } = this.props;
+    const {
+      botId,
+      currentUser,
+      conversationId,
+      directLine,
+      locale,
+      mode,
+      webchatStore,
+      webSpeechPonyfillFactory,
+    } = this.props;
 
-    const isDisabled = mode === 'transcript' || document.mode === 'debug';
+    const isDisabled = mode === 'transcript' || mode === 'debug';
 
     // Due to needing to make idiosyncratic style changes, Emulator is using `createStyleSet` instead of `createStyleOptions`. The object below: {...webChatStyleOptions, hideSendBox...} was formerly passed into the `styleOptions` parameter of React Web Chat. If further styling modifications are desired using styleOptions, simply pass it into the same object in createStyleSet below.
 
@@ -112,9 +123,9 @@ export class Chat extends Component<ChatProps, ChatState> {
       return <div className={styles.disconnected}>Connecting...</div>;
     }
 
-    if (document.directLine) {
+    if (directLine) {
       const bot = {
-        id: document.botId || 'bot',
+        id: botId || 'bot',
         name: 'Bot',
       };
 
@@ -125,14 +136,14 @@ export class Chat extends Component<ChatProps, ChatState> {
             activityMiddleware={this.createActivityMiddleware}
             cardActionMiddleware={this.cardActionMiddleware}
             bot={bot}
-            directLine={document.directLine}
+            directLine={directLine}
             disabled={isDisabled}
-            key={document.conversationId}
+            key={conversationId}
             locale={locale}
             styleSet={styleSet}
             userID={currentUser.id}
             username={currentUser.name || 'User'}
-            webSpeechPonyfillFactory={this.props.webSpeechPonyfillFactory}
+            webSpeechPonyfillFactory={webSpeechPonyfillFactory}
           />
         </div>
       );
@@ -203,7 +214,7 @@ export class Chat extends Component<ChatProps, ChatState> {
   };
 
   private renderTraceActivity(next, card, children): ReactNode {
-    if (this.props.document.mode !== 'debug') {
+    if (this.props.mode !== 'debug') {
       return null;
     }
     const { valueType } = card.activity; // activities are nested
@@ -259,7 +270,7 @@ export class Chat extends Component<ChatProps, ChatState> {
 
   protected updateSelectedActivity(id: string): void {
     const selectedActivity: Activity & { showInInspector?: boolean } = this.activityMap[id];
-    this.props.setInspectorObject(this.props.document.documentId, { ...selectedActivity, showInInspector: true });
+    this.props.setInspectorObject(this.props.documentId, { ...selectedActivity, showInInspector: true });
   }
 
   private shouldBeSelected(subject: Activity): boolean {
