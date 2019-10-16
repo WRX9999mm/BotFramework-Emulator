@@ -37,23 +37,19 @@ import { Activity, ActivityTypes } from 'botframework-schema';
 import ReactWebChat, { createStyleSet } from 'botframework-webchat';
 import * as React from 'react';
 import { PureComponent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
-import { PrimaryButton } from '@bfemulator/ui-react';
 import { EmulatorMode } from '@bfemulator/sdk-shared';
 import { DirectLine } from 'botframework-directlinejs';
 
-import { areActivitiesEqual, getActivityTargets } from '../../../../../utils';
-
-import ActivityWrapper from './activityWrapper';
+import { ActivityWrapperContainer } from './activityWrapperContainer';
 import * as styles from './chat.scss';
 import webChatStyleOptions from './webChatTheme';
+import { TraceActivityContainer } from './traceActivityContainer';
 
 export interface ChatProps {
   botId?: string;
   conversationId?: string;
   directLine?: DirectLine;
   documentId?: string;
-  inspectorObjects?: any[];
-  highlightedObjects?: Activity[];
   mode: EmulatorMode;
   currentUser: User;
   locale: string;
@@ -79,21 +75,6 @@ const adaptiveCardInputs = {
 export class Chat extends PureComponent<ChatProps, ChatState> {
   public state = { waitForSpeechToken: false } as ChatState;
   private activityMap: { [activityId: string]: Activity };
-
-  public static getDerivedStateFromProps(newProps: ChatProps): ChatState {
-    let selectedActivity = 'inspectorObjects' in newProps ? newProps.inspectorObjects[0] : ({} as Activity);
-    // The log panel gives us the entire trace while
-    // WebChat gives us the nested activity. Determine
-    // if we should be targeting the nested activity
-    // within the selected activity.
-    if (selectedActivity && selectedActivity.valueType === ValueTypes.Activity) {
-      selectedActivity = selectedActivity.value;
-    }
-    const highlightedActivities = getActivityTargets([...(newProps.highlightedObjects || []), selectedActivity]);
-    return {
-      highlightedActivities,
-    };
-  }
 
   public render() {
     this.activityMap = {};
@@ -154,16 +135,16 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
 
   private activityWrapper(next, card, children): ReactNode {
     return (
-      <ActivityWrapper
-        activity={card.activity}
-        data-activity-id={card.activity.id}
-        onClick={this.onItemRendererClick}
-        onKeyDown={this.onItemRendererKeyDown}
+      <ActivityWrapperContainer
+        card={card}
+        documentId={this.props.documentId}
+        next={next}
         onContextMenu={this.onContextMenu}
-        isSelected={this.shouldBeSelected(card.activity)}
+        onItemRendererClick={this.onItemRendererClick}
+        onItemRendererKeyDown={this.onItemRendererKeyDown}
       >
         {next(card)(children)}
-      </ActivityWrapper>
+      </ActivityWrapperContainer>
     );
   }
 
@@ -214,67 +195,26 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
   };
 
   private renderTraceActivity(next, card, children): ReactNode {
-    if (this.props.mode !== 'debug') {
-      return null;
-    }
-    const { valueType } = card.activity; // activities are nested
-    if (valueType === ValueTypes.Activity) {
-      const messageActivity = card.activity.value;
-      return (
-        <ActivityWrapper
-          activity={messageActivity}
-          data-activity-id={card.activity.id}
-          onKeyDown={this.onItemRendererKeyDown}
-          onClick={this.onItemRendererClick}
-          onContextMenu={this.onContextMenu}
-          isSelected={this.shouldBeSelected(messageActivity)}
-        >
-          {next({ activity: messageActivity, timestampClassName: 'transcript-timestamp' })(children)}
-        </ActivityWrapper>
-      );
-    } else if (valueType === ValueTypes.Command) {
-      const messageActivity = { ...card.activity, type: ActivityTypes.Message, text: card.activity.value } as Activity;
-      return (
-        <ActivityWrapper
-          activity={messageActivity}
-          data-activity-id={card.activity.id}
-          onKeyDown={this.onItemRendererKeyDown}
-          onClick={this.onItemRendererClick}
-          onContextMenu={this.onContextMenu}
-          isSelected={this.shouldBeSelected(messageActivity)}
-        >
-          {next({ activity: messageActivity, timestampClassName: 'transcript-timestamp' })(children)}
-        </ActivityWrapper>
-      );
-    } else if (valueType === ValueTypes.BotState) {
-      const diffIndicatorIndex =
-        this.state.highlightedActivities.length > 1
-          ? this.state.highlightedActivities.findIndex(activity => areActivitiesEqual(activity, card.activity))
-          : -1;
-      return (
-        <PrimaryButton
-          className={styles.botStateObject}
-          data-activity-id={card.activity.id}
-          data-diff-indicator-index={diffIndicatorIndex}
-          onKeyDown={this.onItemRendererKeyDown}
-          onClick={this.onItemRendererClick}
-          onContextMenu={this.onContextMenu}
-          aria-selected={this.shouldBeSelected(card.activity)}
-        >
-          Bot State
-        </PrimaryButton>
-      );
-    }
-    return null;
+    const { documentId, mode } = this.props;
+
+    return (
+      <TraceActivityContainer
+        card={card}
+        documentId={documentId}
+        mode={mode}
+        next={next}
+        onKeyDown={this.onItemRendererKeyDown}
+        onClick={this.onItemRendererClick}
+        onContextMenu={this.onContextMenu}
+      >
+        {children}
+      </TraceActivityContainer>
+    );
   }
 
   protected updateSelectedActivity(id: string): void {
     const selectedActivity: Activity & { showInInspector?: boolean } = this.activityMap[id];
     this.props.setInspectorObject(this.props.documentId, { ...selectedActivity, showInInspector: true });
-  }
-
-  private shouldBeSelected(subject: Activity): boolean {
-    return this.state.highlightedActivities.some(activity => areActivitiesEqual(activity, subject));
   }
 
   private onItemRendererClick = (event: MouseEvent<HTMLDivElement | HTMLButtonElement>): void => {

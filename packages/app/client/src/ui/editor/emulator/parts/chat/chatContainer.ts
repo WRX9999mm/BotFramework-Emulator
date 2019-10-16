@@ -53,8 +53,6 @@ const mapStateToProps = (state: RootState, { documentId }): Partial<ChatProps> =
     botId: currentChat.botId,
     conversationId: currentChat.conversationId,
     directLine: currentChat.directLine,
-    highlightedObjects: currentChat.highlightedObjects,
-    inspectorObjects: currentChat.inspectorObjects,
     mode: currentChat.mode,
     currentUser:
       state.clientAwareSettings.users.usersById[currentUserId] || ({ id: currentUserId, name: 'User' } as User),
