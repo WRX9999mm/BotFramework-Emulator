@@ -65,13 +65,6 @@ interface ChatState {
   highlightedActivities?: Activity[];
 }
 
-const adaptiveCardInputs = {
-  INPUT: null,
-  OPTION: null,
-  SELECT: null,
-  TEXTAREA: null,
-};
-
 export class Chat extends PureComponent<ChatProps, ChatState> {
   public state = { waitForSpeechToken: false } as ChatState;
   private activityMap: { [activityId: string]: Activity };
@@ -218,24 +211,12 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
   }
 
   private onItemRendererClick = (event: MouseEvent<HTMLDivElement | HTMLButtonElement>): void => {
-    // if we click inside of an input within an adaptive card, we want to avoid selecting the activity
-    // because it will cause a Web Chat re-render which will wipe the adaptive card state
-    const { target = { tagName: '' } } = event;
-    if (this.elementIsAnAdaptiveCardInput(target as HTMLElement)) {
-      return;
-    }
     const { activityId } = (event.currentTarget as any).dataset;
     this.updateSelectedActivity(activityId);
   };
 
   private onItemRendererKeyDown = (event: KeyboardEvent<HTMLDivElement | HTMLButtonElement>): void => {
     if (event.key !== ' ' && event.key !== 'Enter') {
-      return;
-    }
-    // if we type inside of an input within an adaptive card, we want to avoid selecting the activity
-    // on spacebar because it will cause a Web Chat re-render which will wipe the adaptive card state
-    const { target = { tagName: '' } } = event;
-    if (event.key === ' ' && this.elementIsAnAdaptiveCardInput(target as HTMLElement)) {
       return;
     }
     const { activityId } = (event.currentTarget as any).dataset;
@@ -248,14 +229,5 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
 
     this.updateSelectedActivity(activityId);
     this.props.showContextMenuForActivity(activity);
-  };
-
-  private elementIsAnAdaptiveCardInput = (element: HTMLElement): boolean => {
-    const { tagName = '' } = element;
-    // adaptive cards embed <p> tags inside of input <labels>
-    if (element.parentElement && element.parentElement.tagName === 'LABEL') {
-      return true;
-    }
-    return tagName in adaptiveCardInputs;
   };
 }
