@@ -32,16 +32,13 @@
 //
 
 import * as React from 'react';
-import { connect } from 'react-redux';
-import { ValueTypes } from '@bfemulator/app-shared';
 import { Activity } from 'botframework-schema';
 
-import { RootState } from '../../../../../state';
-import { areActivitiesEqual, getActivityTargets } from '../../../../../utils';
+import { areActivitiesEqual } from '../../../../../utils';
 
 import { ActivityWrapper } from './activityWrapper';
 
-export interface ActivityWrapperHighlighterProps {
+export interface OuterActivityWrapperProps {
   card?: any;
   children?: any;
   highlightedActivities?: Activity[];
@@ -50,7 +47,7 @@ export interface ActivityWrapperHighlighterProps {
   onItemRendererKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
 }
 
-export class ActivityWrapperHighlighter extends React.Component<ActivityWrapperHighlighterProps, {}> {
+export class OuterActivityWrapper extends React.Component<OuterActivityWrapperProps, {}> {
   public render() {
     const { card, children, onContextMenu, onItemRendererClick, onItemRendererKeyDown } = this.props;
 
@@ -72,25 +69,3 @@ export class ActivityWrapperHighlighter extends React.Component<ActivityWrapperH
     return this.props.highlightedActivities.some(activity => areActivitiesEqual(activity, subject));
   }
 }
-
-function mapStateToProps(state: RootState, { documentId }: { documentId: string }) {
-  const { highlightedObjects = [], inspectorObjects = [{}] } = state.chat.chats[documentId];
-  let selectedActivity = inspectorObjects[0];
-  // The log panel gives us the entire trace while
-  // WebChat gives us the nested activity. Determine
-  // if we should be targeting the nested activity
-  // within the selected activity.
-  if (selectedActivity && selectedActivity.valueType === ValueTypes.Activity) {
-    selectedActivity = selectedActivity.value;
-  }
-  const highlightedActivities = getActivityTargets([...highlightedObjects, selectedActivity]);
-
-  return {
-    highlightedActivities,
-  };
-}
-
-export const ActivityWrapperContainer = connect(
-  mapStateToProps,
-  undefined
-)(ActivityWrapperHighlighter);

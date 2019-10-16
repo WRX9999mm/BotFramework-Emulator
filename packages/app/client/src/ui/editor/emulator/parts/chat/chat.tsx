@@ -40,7 +40,7 @@ import { PureComponent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { EmulatorMode } from '@bfemulator/sdk-shared';
 import { DirectLine } from 'botframework-directlinejs';
 
-import { ActivityWrapperContainer } from './activityWrapperContainer';
+import { OuterActivityWrapperContainer } from './outerActivityWrapperContainer';
 import * as styles from './chat.scss';
 import webChatStyleOptions from './webChatTheme';
 import { TraceActivityContainer } from './traceActivityContainer';
@@ -135,7 +135,7 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
 
   private activityWrapper(next, card, children): ReactNode {
     return (
-      <ActivityWrapperContainer
+      <OuterActivityWrapperContainer
         card={card}
         documentId={this.props.documentId}
         next={next}
@@ -144,7 +144,7 @@ export class Chat extends PureComponent<ChatProps, ChatState> {
         onItemRendererKeyDown={this.onItemRendererKeyDown}
       >
         {next(card)(children)}
-      </ActivityWrapperContainer>
+      </OuterActivityWrapperContainer>
     );
   }
 
